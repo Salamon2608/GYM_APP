@@ -1,0 +1,9 @@
+Analyzing user_management_screen.dart...
+
+  error - user_management_screen.dart:636:9 - Expected to find ';'. - expected_token
+  error - user_management_screen.dart:636:10 - Expected an identifier. - missing_identifier
+  error - user_management_screen.dart:636:10 - Unexpected text ';'. Try removing the text. - unexpected_token
+  error - user_management_screen.dart:637:7 - Expected to find '}'. - expected_token
+   info - user_management_screen.dart:381:7 - Statements in an if should be enclosed in a block. Try wrapping the statement in a block. - curly_braces_in_flow_control_structures
+
+5 issues found.

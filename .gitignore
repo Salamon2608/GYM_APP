@@ -1,0 +1,33 @@
+# Node & Backend
+backend/node_modules/
+backend/.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/npm-debug.log*
+
+# Flutter / Dart
+gym_management/.dart_tool/
+gym_management/.flutter-plugins
+gym_management/.flutter-plugins-dependencies
+gym_management/.pub-cache/
+gym_management/.pub/
+gym_management/build/
+gym_management/android/app/debug/
+gym_management/android/app/profile/
+gym_management/android/app/release/
+gym_management/ios/Pods/
+gym_management/ios/.symlinks/
+gym_management/ios/Flutter/Flutter.framework
+gym_management/ios/Flutter/Flutter.podspec
+gym_management/ios/Flutter/Generated.xcconfig
+gym_management/ios/Flutter/ephemeral/
+gym_management/*.iml
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.pem
+*.key
+*.log
