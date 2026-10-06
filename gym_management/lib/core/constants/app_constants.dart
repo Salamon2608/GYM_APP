@@ -1,6 +1,6 @@
 class AppConstants {
-  // Backend API URL
-  static const String apiBaseUrl = 'http://192.168.1.36:3000/api';
+  // Backend API URL (AWS EC2 Live Server)
+  static const String apiBaseUrl = 'http://54.152.143.110/api';
 
   // Razorpay Configuration
   // USER: Replace with your actual Razorpay Key (Test or Live)
