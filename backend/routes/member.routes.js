@@ -519,11 +519,13 @@ router.post('/attendance/checkout', async (req, res) => {
     );
 
     if (records.length > 0) {
-      await db.query('UPDATE attendance SET check_out = ? WHERE id = ?', [new Date().toISOString(), records[0].id]);
+      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await db.query('UPDATE attendance SET check_out = ? WHERE id = ?', [nowStr, records[0].id]);
     }
 
     res.json({ message: 'Checked out' });
   } catch (err) {
+    console.error('Checkout error:', err);
     res.status(500).json({ error: err.message });
   }
 });

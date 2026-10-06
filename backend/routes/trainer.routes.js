@@ -650,7 +650,72 @@ router.delete('/videos/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// MANUAL ATTENDANCE
+// TRAINER SELF ATTENDANCE
+// ─────────────────────────────────────────────
+router.post('/attendance/checkin', async (req, res) => {
+  try {
+    const gymId = getGymId(req);
+    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    // Close any previous open session
+    await db.query(
+      `UPDATE attendance SET check_out = ? WHERE user_id = ? AND gym_id = ? AND check_out IS NULL AND check_in < ?`,
+      [nowStr, req.user.id, gymId, nowStr]
+    );
+
+    // Create new check-in
+    await db.query(
+      `INSERT INTO attendance (id, user_id, gym_id, check_in, method)
+       VALUES (?, ?, ?, ?, 'gps')`,
+      [uuidv4(), req.user.id, gymId, nowStr]
+    );
+    res.json({ message: 'Checked in successfully' });
+  } catch (err) {
+    console.error('Trainer Check-in error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/attendance/checkout', async (req, res) => {
+  try {
+    const gymId = getGymId(req);
+    const [records] = await db.query(
+      'SELECT id FROM attendance WHERE user_id = ? AND gym_id = ? AND check_out IS NULL ORDER BY check_in DESC LIMIT 1',
+      [req.user.id, gymId]
+    );
+
+    if (records.length > 0) {
+      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await db.query('UPDATE attendance SET check_out = ? WHERE id = ?', [nowStr, records[0].id]);
+    }
+
+    res.json({ message: 'Checked out' });
+  } catch (err) {
+    console.error('Trainer Checkout error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/attendance/today', async (req, res) => {
+  try {
+    const gymId = getGymId(req);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 19).replace('T', ' ');
+
+    const [records] = await db.query(
+      'SELECT * FROM attendance WHERE user_id = ? AND gym_id = ? AND check_in >= ? ORDER BY check_in DESC LIMIT 1',
+      [req.user.id, gymId, todayStr]
+    );
+
+    res.json(records.length > 0 ? records[0] : null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// MANUAL ATTENDANCE (MEMBER)
 // ─────────────────────────────────────────────
 router.post('/attendance/:memberId', async (req, res) => {
   try {
