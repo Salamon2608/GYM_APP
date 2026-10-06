@@ -493,18 +493,19 @@ router.post('/attendance/checkin', async (req, res) => {
     // Close orphaned sessions from previous days
     await db.query(
       `UPDATE attendance SET check_out = ? WHERE user_id = ? AND gym_id = ? AND check_out IS NULL AND check_in < ?`,
-      [startOfToday.toISOString(), req.user.id, gymId, startOfToday.toISOString()]
+      [startOfToday, req.user.id, gymId, startOfToday]
     );
 
     // New check-in
     await db.query(
       `INSERT INTO attendance (id, user_id, gym_id, check_in, method)
        VALUES (?, ?, ?, ?, ?)`,
-      [uuidv4(), req.user.id, gymId, new Date().toISOString(), method || 'gps']
+      [uuidv4(), req.user.id, gymId, new Date(), method || 'gps']
     );
 
     res.status(201).json({ message: 'Checked in' });
   } catch (err) {
+    console.error('Check-in error:', err);
     res.status(500).json({ error: err.message });
   }
 });

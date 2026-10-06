@@ -658,32 +658,35 @@ router.post('/attendance/:memberId', async (req, res) => {
     const memberId = req.params.memberId;
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfDayStr = startOfDay.toISOString().slice(0, 19).replace('T', ' ');
+    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     // Check if open check-in today
     const [existing] = await db.query(
       'SELECT id FROM attendance WHERE user_id = ? AND gym_id = ? AND check_in >= ? AND check_out IS NULL ORDER BY check_in DESC LIMIT 1',
-      [memberId, gymId, startOfDay.toISOString()]
+      [memberId, gymId, startOfDayStr]
     );
 
     if (existing.length > 0) {
       // Check-out
-      await db.query('UPDATE attendance SET check_out = ? WHERE id = ?', [new Date().toISOString(), existing[0].id]);
+      await db.query('UPDATE attendance SET check_out = ? WHERE id = ?', [nowStr, existing[0].id]);
       res.json({ status: 'checked_out' });
     } else {
       // Close orphaned sessions
       await db.query(
         'UPDATE attendance SET check_out = ? WHERE user_id = ? AND check_out IS NULL AND check_in < ?',
-        [startOfDay.toISOString(), memberId, startOfDay.toISOString()]
+        [startOfDayStr, memberId, startOfDayStr]
       );
 
       // New check-in
       await db.query(
         "INSERT INTO attendance (id, user_id, gym_id, check_in, method) VALUES (?, ?, ?, ?, 'manual')",
-        [uuidv4(), memberId, gymId, new Date().toISOString()]
+        [uuidv4(), memberId, gymId, nowStr]
       );
       res.json({ status: 'checked_in' });
     }
   } catch (err) {
+    console.error('Manual attendance error:', err);
     res.status(500).json({ error: err.message });
   }
 });

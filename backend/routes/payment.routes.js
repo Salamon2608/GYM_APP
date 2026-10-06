@@ -326,12 +326,12 @@ router.post('/verify', authMiddleware, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// GET /api/payments/receipt/:paymentId
-// ─────────────────────────────────────────────
 router.get('/receipt/:paymentId', authMiddleware, async (req, res) => {
   try {
+    console.log(`[RECEIPT] Fetching receipt for payment ID: ${req.params.paymentId} by user: ${req.user.id} (${req.user.role})`);
+    
     const [payments] = await db.query(
-      `SELECT p.*, mp.name as plan_name, mp.duration_months, g.name as gym_name, g.address as gym_address, g.phone as gym_phone, u.full_name as member_name, u.email as member_email
+      `SELECT p.*, mp.name as plan_name, mp.duration_months, g.name as gym_name, g.address as gym_address, u.full_name as member_name, u.email as member_email
        FROM payments p
        LEFT JOIN membership_plans mp ON p.membership_plan_id = mp.id
        LEFT JOIN gyms g ON p.gym_id = g.id
@@ -341,6 +341,7 @@ router.get('/receipt/:paymentId', authMiddleware, async (req, res) => {
     );
 
     if (payments.length === 0) {
+      console.log(`[RECEIPT] Receipt not found: ${req.params.paymentId}`);
       return res.status(404).json({ error: 'Receipt not found' });
     }
 
@@ -348,12 +349,15 @@ router.get('/receipt/:paymentId', authMiddleware, async (req, res) => {
     
     // Auth check: member can only view their own receipt; admins can view any in their gym
     if (req.user.role === 'member' && p.user_id !== req.user.id) {
+      console.log(`[RECEIPT] Access denied for member: ${req.user.id}`);
       return res.status(403).json({ error: 'Access denied' });
     }
     if (req.user.role === 'admin' && p.gym_id !== req.user.gymId) {
+      console.log(`[RECEIPT] Access denied for admin: ${req.user.id}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    console.log(`[RECEIPT] Sending successful receipt for: ${p.id}`);
     res.json({
       id: p.id,
       receipt_number: p.receipt_number,
@@ -367,11 +371,12 @@ router.get('/receipt/:paymentId', authMiddleware, async (req, res) => {
       duration_months: p.duration_months,
       gym_name: p.gym_name,
       gym_address: p.gym_address,
-      gym_phone: p.gym_phone,
+      gym_phone: 'N/A', // Column does not exist in gyms table
       member_name: p.member_name,
       member_email: p.member_email,
     });
   } catch (err) {
+    console.error(`[RECEIPT] Error fetching receipt:`, err);
     res.status(500).json({ error: err.message });
   }
 });

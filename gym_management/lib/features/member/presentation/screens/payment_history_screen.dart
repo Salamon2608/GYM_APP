@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:gym_management/core/theme/app_theme.dart';
 import 'package:gym_management/features/member/providers/payment_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:gym_management/core/router/app_router.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
@@ -681,24 +684,147 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
           if (orderId != 'N/A') _buildMetaRow('Razorpay Order ID', orderId),
           const SizedBox(height: 32),
 
-          // Close Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.cardDark,
-                foregroundColor: AppTheme.textPrimary,
-                side: const BorderSide(color: AppTheme.borderDark),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          // Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _downloadReceiptPdf(receipt),
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Download'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ),
-              child: const Text('Close Receipt'),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.cardDark,
+                    foregroundColor: AppTheme.textPrimary,
+                    side: const BorderSide(color: AppTheme.borderDark),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _downloadReceiptPdf(Map<String, dynamic> receipt) async {
+    final pdf = pw.Document();
+
+    final gymName = receipt['gym_name'] ?? 'TRACEFIT Partner Gym';
+    final gymAddress = receipt['gym_address'] ?? 'N/A';
+    final planName = receipt['plan_name'] ?? 'Membership Plan';
+    final amount = receipt['amount'] ?? '0.00';
+    final method = receipt['method'] ?? 'online';
+    final status = receipt['status'] ?? 'completed';
+    final date = DateTime.tryParse(receipt['created_at'] ?? '') ?? DateTime.now();
+    final formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(date);
+    final receiptNumber = receipt['receipt_number'] ?? 'N/A';
+    final memberName = receipt['member_name'] ?? 'Valued Member';
+    final memberEmail = receipt['member_email'] ?? 'N/A';
+    final transactionId = receipt['transaction_id'] ?? 'N/A';
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('TRACEFIT', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold, color: PdfColors.deepOrange)),
+                    pw.Text('PAYMENT RECEIPT', style: pw.TextStyle(fontSize: 18, color: PdfColors.grey700)),
+                  ]
+                )
+              ),
+              pw.SizedBox(height: 30),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('BILLED TO', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                      pw.SizedBox(height: 5),
+                      pw.Text(memberName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(memberEmail, style: pw.TextStyle(fontSize: 12, color: PdfColors.grey800)),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('GYM DETAILS', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                      pw.SizedBox(height: 5),
+                      pw.Text(gymName, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                      if (gymAddress != 'N/A') pw.Text(gymAddress, style: pw.TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 40),
+              pw.Table.fromTextArray(
+                context: context,
+                border: const pw.TableBorder(
+                  bottom: pw.BorderSide(color: PdfColors.grey300),
+                  horizontalInside: pw.BorderSide(color: PdfColors.grey300),
+                ),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                cellHeight: 35,
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.centerRight,
+                },
+                data: <List<String>>[
+                  <String>['ITEM DESCRIPTION', 'AMOUNT'],
+                  <String>['$planName Membership', 'INR $amount'],
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Text('Total Paid: ', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('INR $amount', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.deepOrange)),
+                ],
+              ),
+              pw.SizedBox(height: 40),
+              pw.Divider(color: PdfColors.grey300),
+              pw.SizedBox(height: 10),
+              pw.Text('TRANSACTION DETAILS', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600)),
+              pw.SizedBox(height: 10),
+              pw.Text('Receipt No: $receiptNumber', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text('Date: $formattedDate', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text('Payment Method: ${method.toString().toUpperCase()}', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text('Status: ${status.toString().toUpperCase()}', style: const pw.TextStyle(fontSize: 10)),
+              if (transactionId != 'N/A') pw.Text('Transaction ID: $transactionId', style: const pw.TextStyle(fontSize: 10)),
+              pw.SizedBox(height: 40),
+              pw.Center(child: pw.Text('Thank you for choosing Tracefit!', style: pw.TextStyle(color: PdfColors.grey600, fontStyle: pw.FontStyle.italic))),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(bytes: await pdf.save(), filename: 'receipt_$receiptNumber.pdf');
   }
 
   Widget _buildMetaRow(String label, String value) {
